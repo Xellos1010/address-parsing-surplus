@@ -290,8 +290,8 @@ function parseAddressString(address: string): ParsedAddress | null {
       return null;
     }
 
-    // Match state and ZIP (5 or 9 digits, with or without dash) at the end of the string, after a comma
-    const stateZipRegex = /,\s*([A-Z]{2})\s*(\d{5}(?:-?\d{4})?)$/;
+    // Match state and ZIP (5 or 9 digits) at the end of the string, after a comma, allowing for an optional empty city field and optional ZIP
+    const stateZipRegex = /(?:,\s*){1,2}([A-Z]{2})(?:\s*(\d{5}(?:-?\d{4})?))?$/;
     const stateZipMatch = address.match(stateZipRegex);
     if (!stateZipMatch) {
       return {
@@ -307,8 +307,8 @@ function parseAddressString(address: string): ParsedAddress | null {
     const zip = stateZipMatch[2] || null;
     const addressWithoutStateZip = address.replace(stateZipRegex, "").trim();
 
-    // Split remaining parts by comma
-    const parts = addressWithoutStateZip.split(",").map(part => part.trim()).filter(part => part);
+    // Split remaining parts by comma, preserving empty fields
+    const parts = addressWithoutStateZip.split(",").map(part => part.trim());
     if (parts.length < 1) {
       return {
         streetAddress: null,
@@ -319,8 +319,8 @@ function parseAddressString(address: string): ParsedAddress | null {
       };
     }
 
-    const streetAddress = parts[0];
-    const city = parts.length > 1 ? parts[1] : null;
+    const streetAddress = parts[0] || null;
+    const city = parts.length > 1 && parts[1] !== "" ? parts[1] : null;
     const unit = extractUnitFromPropertyAddress(address) || null;
 
     return {
