@@ -305,8 +305,8 @@ function parseAddressString(address: string): ParsedAddress | null {
       return null;
     }
 
-    // Match state and ZIP (5 or 9 digits) at the end of the string, after a comma
-    const stateZipRegex = /,\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)$/;
+    // Match state and ZIP (5 or 9 digits, with or without dash) at the end of the string, after a comma
+    const stateZipRegex = /,\s*([A-Z]{2})\s*(\d{5}(?:-?\d{4})?)$/;
     const stateZipMatch = address.match(stateZipRegex);
     if (!stateZipMatch) {
       return null;
