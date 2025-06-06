@@ -190,11 +190,9 @@ export function formatCriteriaForApi(criteria: PropertyCriteria[]): PropertyCrit
 export function isInvalidPropertyAddress(address: string): boolean {
   const invalidPatterns = [
     /^UNKNOWN$/i,
-    /^VACANT LOT$/i,
     /^UNASSIGNED$/i,
     /^NO SITUS$/i,
     /^\s*$/,
-    /^VACANT LOT IN/i,
   ];
   return invalidPatterns.some(pattern => pattern.test(address.trim()));
 }
