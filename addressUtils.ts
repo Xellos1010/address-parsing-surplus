@@ -2,11 +2,11 @@
  * Interface for parsed address components
  */
 export interface ParsedAddress {
-  streetAddress: string;
-  city: string;
-  state: string;
-  zip: string;
-  unit?: string; // Optional unit number (e.g., "6", "6G", "203")
+  streetAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  unit: string | null;
 }
 
 /**
@@ -57,28 +57,13 @@ export function extractAddressFromLegalDescription(legalDescription: string): st
  * @param address - Property address string
  * @returns Unit number if found, undefined otherwise
  */
-export function extractUnitFromPropertyAddress(address: string): string | undefined {
-  if (!address) return undefined;
+export function extractUnitFromPropertyAddress(address: string): string | null {
+  if (!address) return null;
 
   // Explicit unit indicators (e.g., "Unit 123", "Apt 456", "#6G")
-  const unitRegex = /(?:Unit|Apt|Suite|#)\s*([\w-]+)/i;
-  const unitMatch = address.match(unitRegex);
-  if (unitMatch) {
-    return unitMatch[1];
-  }
-
-  // Trailing unit number, but exclude 5-digit numbers (likely ZIP codes) and road numbers
-  const trailingUnitRegex = /\b(?:Unit|Apt|Suite|#)?\s*(\d+[A-Za-z]?[-\w]*)\s*(?![,\s]*[A-Z]{2}\s*\d{5})/i;
-  const trailingUnitMatch = address.match(trailingUnitRegex);
-  if (trailingUnitMatch) {
-    const unit = trailingUnitMatch[1];
-    // Avoid matching road numbers like "FM 757" or "TOWNSHIP ROAD 1122"
-    if (!/^(FM|STATE|TOWNSHIP|COUNTY|PRIVATE|US|SR|ROUTE)\s*\d+$/i.test(address)) {
-      return unit;
-    }
-  }
-
-  return undefined;
+  const unitRegex = /(?:Unit|Apt|#)\s*([A-Z0-9]+)/i;
+  const match = address.match(unitRegex);
+  return match && match[1] ? match[1] : null;
 }
 
 /**
@@ -309,36 +294,48 @@ function parseAddressString(address: string): ParsedAddress | null {
     const stateZipRegex = /,\s*([A-Z]{2})\s*(\d{5}(?:-?\d{4})?)$/;
     const stateZipMatch = address.match(stateZipRegex);
     if (!stateZipMatch) {
-      return null;
+      return {
+        streetAddress: null,
+        unit: null,
+        city: null,
+        state: null,
+        zip: null
+      };
     }
 
     const state = stateZipMatch[1];
-    const zip = stateZipMatch[2] || "";
+    const zip = stateZipMatch[2] || null;
     const addressWithoutStateZip = address.replace(stateZipRegex, "").trim();
 
     // Split remaining parts by comma
     const parts = addressWithoutStateZip.split(",").map(part => part.trim()).filter(part => part);
-    if (parts.length < 2) {
-      return null;
+    if (parts.length < 1) {
+      return {
+        streetAddress: null,
+        unit: null,
+        city: null,
+        state: null,
+        zip: null
+      };
     }
 
     const streetAddress = parts[0];
-    const city = parts[1] || "";
-    const unit = extractUnitFromPropertyAddress(address);
+    const city = parts.length > 1 ? parts[1] : null;
+    const unit = extractUnitFromPropertyAddress(address) || null;
 
     return {
       streetAddress,
+      unit,
       city,
       state,
-      zip,
-      unit,
+      zip
     };
   } catch (err) {
     return null;
   }
 }
 
-function extractUnitNumber(address: string): string | undefined {
+function extractUnitNumber(address: string): string | null {
   const unitMatch = address.match(/(?:UNIT|#|APT|SUITE|STE|LOT)\s*([A-Z0-9-]+)/i);
-  return unitMatch ? unitMatch[1] : undefined;
+  return unitMatch ? unitMatch[1] : null;
 }
