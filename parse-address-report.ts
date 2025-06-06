@@ -20,9 +20,12 @@ createReadStream(inputFile)
   .on("data", (row: { "Property Address": string; "Legal Description": string }) => {
     const address = row["Property Address"];
     const legalDescription = row["Legal Description"];
+    if (address.includes("VACANT LOT")) {
+      console.log(address);
+    }
     const parsed: ParsedAddress | null = parseAddress(address, legalDescription);
     
-    if (parsed) {
+    if (parsed && (parsed.streetAddress || parsed.city || parsed.state || parsed.zip || parsed.unit)) {
       results.push({ 
         address, 
         legalDescription,

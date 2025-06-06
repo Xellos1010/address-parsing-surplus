@@ -122,7 +122,7 @@ export function parseAddress(address: string, legalDescription?: string): Parsed
     }
   }
 
-  return null;
+  return parsedAddress;
 }
 
 /**
@@ -290,10 +290,29 @@ function parseAddressString(address: string): ParsedAddress | null {
       return null;
     }
 
-    // Match state and ZIP (5 or 9 digits) at the end of the string, after a comma, allowing for an optional empty city field and optional ZIP
+    // Match state and optional ZIP at the end, even if city and ZIP are missing
     const stateZipRegex = /(?:,\s*){1,2}([A-Z]{2})(?:\s*(\d{5}(?:-?\d{4})?))?$/;
     const stateZipMatch = address.match(stateZipRegex);
     if (!stateZipMatch) {
+      // Try to match just state at the end (e.g., 'FM 2276, , TX')
+      const stateOnlyRegex = /(?:,\s*){1,2}([A-Z]{2})$/;
+      const stateOnlyMatch = address.match(stateOnlyRegex);
+      if (stateOnlyMatch) {
+        const state = stateOnlyMatch[1];
+        const addressWithoutState = address.replace(stateOnlyRegex, "").trim();
+        const parts = addressWithoutState.split(",").map(part => part.trim()).filter(part => part);
+        const streetPart = parts[0] || "";
+        const unitMatch = streetPart.match(/\b(?:Unit|Apt|#|BLK|BLOCK)\s*([A-Z0-9-]+)\b/i);
+        const unit = unitMatch ? unitMatch[1] : null;
+        const streetAddress = unitMatch ? streetPart.replace(unitMatch[0], "").trim() : streetPart;
+        return {
+          streetAddress: streetAddress || null,
+          unit,
+          city: null,
+          state: state || null,
+          zip: null
+        };
+      }
       return {
         streetAddress: null,
         unit: null,
@@ -304,31 +323,50 @@ function parseAddressString(address: string): ParsedAddress | null {
     }
 
     const state = stateZipMatch[1];
-    const zip = stateZipMatch[2] || null;
+    const zip = stateZipMatch[2] || "";
     const addressWithoutStateZip = address.replace(stateZipRegex, "").trim();
 
-    // Split remaining parts by comma, preserving empty fields
-    const parts = addressWithoutStateZip.split(",").map(part => part.trim());
-    if (parts.length < 1) {
+    // Split remaining parts by comma
+    const parts = addressWithoutStateZip.split(",").map(part => part.trim()).filter(part => part);
+
+    // Extract street address and unit
+    const streetPart = parts[0] || "";
+    // Updated unit regex to handle more formats including BLK/BLOCK and FM roads
+    const unitMatch = streetPart.match(/\b(?:Unit|Apt|#|BLK|BLOCK)\s*([A-Z0-9-]+)\b/i);
+    const unit = unitMatch ? unitMatch[1] : null;
+    const streetAddress = unitMatch ? streetPart.replace(unitMatch[0], "").trim() : streetPart;
+
+    // Extract city (may be empty)
+    const city = parts.length > 1 ? parts[1] : "";
+
+    // Handle complex street names (e.g., "VACANT LOT IN 2500 BLK OF AVE H")
+    if (streetAddress.includes("VACANT LOT") || streetAddress.includes("BLK OF")) {
       return {
-        streetAddress: null,
+        streetAddress: streetAddress || null,
         unit: null,
-        city: null,
-        state: null,
-        zip: null
+        city: city || null,
+        state: state || null,
+        zip: zip || null
       };
     }
 
-    const streetAddress = parts[0] || null;
-    const city = parts.length > 1 && parts[1] !== "" ? parts[1] : null;
-    const unit = extractUnitFromPropertyAddress(address) || null;
+    // Handle FM roads
+    if (streetAddress.startsWith("FM ")) {
+      return {
+        streetAddress: streetAddress || null,
+        unit: null,
+        city: city || null,
+        state: state || null,
+        zip: zip || null
+      };
+    }
 
     return {
-      streetAddress,
+      streetAddress: streetAddress || null,
       unit,
-      city,
-      state,
-      zip
+      city: city || null,
+      state: state || null,
+      zip: zip || null
     };
   } catch (err) {
     return null;
